@@ -12,6 +12,13 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.is;
 
 public class PostRequestTests {
+    /**
+     * /api/users - 201
+     * /api/register - 200
+     * /api/register - 400
+     * /api/login - 200
+     * /api/login - 400
+    */
 
     @Test
     void checkSuccessfulRegistrationTest() {
