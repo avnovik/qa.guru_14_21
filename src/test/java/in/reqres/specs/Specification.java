@@ -1,5 +1,6 @@
 package in.reqres.specs;
 
+import in.reqres.helper.CustomApiListener;
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
@@ -12,6 +13,8 @@ import static io.restassured.filter.log.LogDetail.ALL;
 public class Specification {
     public static RequestSpecification requestSpec() {
         return new RequestSpecBuilder()
+                //.addFilter(new AllureRestAssured())
+                .addFilter(CustomApiListener.withCustomTemplates())
                 .setBaseUri("https://reqres.in")
                 .setContentType(ContentType.JSON)
                 .build();
