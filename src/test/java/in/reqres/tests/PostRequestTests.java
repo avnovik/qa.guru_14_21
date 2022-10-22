@@ -1,5 +1,6 @@
 package in.reqres.tests;
 
+import in.reqres.models.lombok.UserLoginSuccessfulLombokModel;
 import in.reqres.models.pojo.UserRegistrationPojoModel;
 import in.reqres.models.pojo.UserSuccessfulRegistrationPojoModel;
 import in.reqres.models.pojo.UserUnsuccessfulRegistrationPojoModel;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.is;
 
 public class PostRequestTests {
 
@@ -48,5 +50,23 @@ public class PostRequestTests {
                 .extract().as(UserUnsuccessfulRegistrationPojoModel.class);
 
         Assertions.assertEquals(expectedErrorText, unsuccessfulRegistration.getError());
+    }
+
+    @Test
+    void checkSuccessfulLoginTest(){
+        Specification.installSpecification(Specification.requestSpec(), Specification.responseSpecUnique(200));
+
+        UserLoginSuccessfulLombokModel user = new UserLoginSuccessfulLombokModel();
+        user.setEmail("eve.holt@reqres.in");
+        user.setPassword("cityslicka");
+
+        String token = "QpwL5tke4Pnpja7X4";         //{ "token": "QpwL5tke4Pnpja7X4" }
+
+        given()
+                .body(user)
+                .when()
+                .post("/api/login")
+                .then()
+                .body("token",is(token));
     }
 }
