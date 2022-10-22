@@ -3,16 +3,31 @@ package in.reqres.tests;
 import in.reqres.models.pojo.ResourceListPojoModel;
 import in.reqres.models.pojo.UserDataPojoModel;
 import in.reqres.specs.Specification;
+import io.restassured.path.json.JsonPath;
+import io.restassured.response.Response;
+import io.restassured.specification.ResponseSpecification;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static io.restassured.RestAssured.expect;
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class GetRequestTests {
-
+    /**
+     * GET uri
+     * /api/users?page=2
+     * /api/users/2
+     * /api/users/23
+     * /api/unknown
+     * /api/unknown/2
+     * /api/unknown/23
+     * /api/users?delay=3
+     */
     @Test
     void checkListUsersWithPojoAndSpecsTest() {
         Specification.installSpecification(Specification.requestSpec(), Specification.responseSpecOK200());
@@ -38,9 +53,29 @@ public class GetRequestTests {
     }
 
     @Test
+    void checkSingleUserInfoTest() {
+        Specification.installSpecification(Specification.requestSpec(), Specification.responseSpecOK200());
+        int expectedId = 2;
+        String expectedEmail = "janet.weaver@reqres.in";
+        Response response = given()
+                .when()
+                .get("/api/users/2")
+                .then()
+                .body("data.id", is(2))
+                .body("data.email", notNullValue())
+                .extract().response();
+
+        JsonPath jsonPath = response.jsonPath();
+        int responseId = jsonPath.get("data.id");
+        String responseEmail = jsonPath.get("data.email");
+
+        Assertions.assertEquals(expectedId, responseId);
+        Assertions.assertEquals(expectedEmail, responseEmail);
+    }
+
+    @Test
     void checkSingleUserWithPojoAndSpecsTest() {
         Specification.installSpecification(Specification.requestSpec(), Specification.responseSpecError404());
-
         given()
                 .log().method()
                 .log().uri()
@@ -48,8 +83,9 @@ public class GetRequestTests {
                 .when()
                 .get("/api/users/23");
     }
+
     @Test
-    void checkSortedYearTest(){
+    void checkSortedYearTest() {
         Specification.installSpecification(Specification.requestSpec(), Specification.responseSpecOK200());
 
         List<ResourceListPojoModel> resourceList = given()
@@ -59,8 +95,67 @@ public class GetRequestTests {
                 .extract().body().jsonPath().getList("data", ResourceListPojoModel.class);
         List<Integer> years = resourceList.stream().map(ResourceListPojoModel::getYear).collect(Collectors.toList());
         List<Integer> sortedYear = years.stream().sorted().collect(Collectors.toList());
-        Assertions.assertEquals(sortedYear,years);
-        System.out.println(years);
-        System.out.println(sortedYear);
+        Assertions.assertEquals(sortedYear, years);
+//        System.out.println(years);
+//        System.out.println(sortedYear);
     }
+
+    @Test
+    void checkSingleResourceTest() {
+
+        given()
+                .baseUri("")
+                .when()
+                .get("/api/unknown/2")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath();
+    }
+
+    @Test
+    void checkSingleResourceNotFoundTest() {
+
+        given()
+                .baseUri("")
+                .when()
+                .get("/api/unknown/23")
+                .then()
+                .statusCode(404)
+                .extract()
+                .jsonPath();
+    }
+
+
+    @Test
+    void checkDelayResponseTest() {
+
+        given()
+                .baseUri("")
+                .when()
+                .get("/api/users?delay=3")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath();
+    }
+
+    @Test
+    void test() {
+        ResponseSpecification responseSpec = expect()
+                .statusCode(200);
+
+        given()
+                .expect()
+                .spec(responseSpec)
+                .when()
+                .get("/hello");
+
+        given()
+                .expect()
+                .spec(responseSpec)
+                .when()
+                .get("/goodbye");
+    }
+
 }
