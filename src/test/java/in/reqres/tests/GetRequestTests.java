@@ -1,21 +1,19 @@
 package in.reqres.tests;
 
+import in.reqres.models.lombok.ListUserInfoResponseLombokModel;
 import in.reqres.models.pojo.ResourceListPojoModel;
 import in.reqres.models.pojo.UserDataPojoModel;
 import in.reqres.specs.Specification;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
-import io.restassured.specification.ResponseSpecification;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static io.restassured.RestAssured.expect;
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 
 public class GetRequestTests {
     /**
@@ -40,10 +38,6 @@ public class GetRequestTests {
                 .get("/api/users?page=2")
                 .then()
                 .extract().body().jsonPath().getList("data", UserDataPojoModel.class);
-        users.forEach(x -> Assertions.assertTrue(x.getAvatar().contains(x.getId().toString())));
-        users.forEach(x -> Assertions.assertTrue(x.getEmail().contains(x.getFirst_name().toLowerCase())));
-
-        Assertions.assertTrue(users.stream().allMatch(n -> n.getAvatar().endsWith(".jpg")));
 
         List<String> avatars = users.stream().map(UserDataPojoModel::getAvatar).collect(Collectors.toList());
         List<String> ids = users.stream().map(x -> x.getId().toString()).collect(Collectors.toList());
@@ -55,14 +49,15 @@ public class GetRequestTests {
     @Test
     void checkSingleUserInfoTest() {
         Specification.installSpecification(Specification.requestSpec(), Specification.responseSpecOK200());
+
         int expectedId = 2;
         String expectedEmail = "janet.weaver@reqres.in";
+
         Response response = given()
                 .when()
                 .get("/api/users/2")
                 .then()
-                .body("data.id", is(2))
-                .body("data.email", notNullValue())
+                .body("data.id", notNullValue())
                 .extract().response();
 
         JsonPath jsonPath = response.jsonPath();
@@ -71,6 +66,7 @@ public class GetRequestTests {
 
         Assertions.assertEquals(expectedId, responseId);
         Assertions.assertEquals(expectedEmail, responseEmail);
+        Assertions.assertEquals(response.jsonPath().getString("data.first_name"), "Janet");
     }
 
     @Test
@@ -104,58 +100,46 @@ public class GetRequestTests {
     void checkSingleResourceTest() {
 
         given()
-                .baseUri("")
+                .spec(Specification.requestSpec())
                 .when()
                 .get("/api/unknown/2")
                 .then()
-                .statusCode(200)
-                .extract()
-                .jsonPath();
+                .spec(Specification.responseSpecUnique(200))
+                .statusLine("HTTP/1.1 200 OK")
+                .header("Content-Type", "application/json; charset=utf-8")
+                .headers("Transfer-Encoding", "chunked", "X-Powered-By", "Express")
+                .contentType("application/json; charset=utf-8")
+                .body("data.name", equalTo("fuchsia rose"))
+                .body("data.color", equalTo("#C74375"));
     }
 
     @Test
     void checkSingleResourceNotFoundTest() {
+        Specification.installSpecification(Specification.requestSpec(), Specification.responseSpecError404());
 
         given()
-                .baseUri("")
+                .spec(Specification.requestSpec())
                 .when()
-                .get("/api/unknown/23")
-                .then()
-                .statusCode(404)
-                .extract()
-                .jsonPath();
+                .get("/api/unknown/{id}", 23);
     }
-
 
     @Test
     void checkDelayResponseTest() {
 
-        given()
-                .baseUri("")
-                .when()
-                .get("/api/users?delay=3")
-                .then()
-                .statusCode(200)
-                .extract()
-                .jsonPath();
+        List<ListUserInfoResponseLombokModel> responseUserInfo =
+                given()
+                        .spec(Specification.requestSpec())
+                        .when()
+                        .get("/api/users?delay=3")
+                        .then()
+                        .spec(Specification.responseSpecOK200())
+                        .time(lessThan(5000L))
+                        .extract()
+                        .body().jsonPath().getList("data", ListUserInfoResponseLombokModel.class);
+
+        responseUserInfo.forEach(x -> Assertions.assertTrue(x.getAvatar().contains(x.getId().toString())));
+        responseUserInfo.forEach(x -> Assertions.assertTrue(x.getEmail().contains(x.getFirst_name().toLowerCase())));
+
+        Assertions.assertTrue(responseUserInfo.stream().allMatch(n -> n.getAvatar().endsWith(".jpg")));
     }
-
-    @Test
-    void test() {
-        ResponseSpecification responseSpec = expect()
-                .statusCode(200);
-
-        given()
-                .expect()
-                .spec(responseSpec)
-                .when()
-                .get("/hello");
-
-        given()
-                .expect()
-                .spec(responseSpec)
-                .when()
-                .get("/goodbye");
-    }
-
 }
